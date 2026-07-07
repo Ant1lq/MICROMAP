@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Carnet de tournée — MAJ Smartview</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tournées MAJ">
+<meta name="theme-color" content="#042a72">
+<meta name="format-detection" content="telephone=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --palette-dark-navy:#12182c;
+    --palette-deep-blue:#042a72;
+    --palette-royal-blue:#4870ff;
+    --palette-cyan:#00dbff;
+    --palette-purple:#802cf1;
+    --palette-plum-magenta:#c72676;
+    --palette-vibrant-red:#ff144b;
+    --palette-muted-gray:#909191;
+
+    --blue-mp:var(--palette-deep-blue);
+    --accent:var(--palette-royal-blue);
+    --neutral-bg:#f8fafc;
+    --card-bg:#ffffff;
+    --text-main:var(--palette-dark-navy);
+    --text-muted:#6b7280;
+    --border-color:#e2e8f0;
+    --danger:var(--palette-vibrant-red);
+    --danger-light:#ffe4e6;
+    --ok:#16a34a;
+    --ok-light:#f0fdf4;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{
+    margin:0;
+    background:var(--neutral-bg);
+    color:var(--text-main);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 20px 80px;}
+
+  header.top{
+    background:linear-gradient(135deg,var(--palette-dark-navy),var(--palette-deep-blue));
+    color:#ffffff;
+    padding:34px 20px 28px;
+    margin-bottom:24px;
+  }
+  .top-inner{max-width:1180px;margin:0 auto;}
+  .eyebrow{
+    font-size:11px; letter-spacing:.7px; text-transform:uppercase;
+    color:#9db4e8; font-weight:800; margin-bottom:8px;
+  }
+  h1{
+    font-size:clamp(22px,3.4vw,28px);
+    margin:0 0 6px; font-weight:850; letter-spacing:-0.4px;
+  }
+  .subtitle{color:#c3cfe8; font-size:13.5px; max-width:640px; line-height:1.55;}
+
+  .stats-row{display:flex; gap:12px; margin-top:22px; flex-wrap:wrap;}
+  .stat{
+    background:rgba(255,255,255,0.08);
+    border:1px solid rgba(255,255,255,0.14);
+    border-radius:16px;
+    padding:12px 18px;
+    min-width:118px;
+  }
+  .stat .n{font-size:22px; font-weight:850; color:#fff;}
+  .stat .l{font-size:10.5px; color:#a8b8de; text-transform:uppercase; letter-spacing:.5px; margin-top:2px; font-weight:700;}
+
+  .panel{
+    background:var(--card-bg);
+    border-radius:20px;
+    padding:20px;
+    margin-bottom:16px;
+    box-shadow:0 4px 20px rgba(18,24,44,0.05);
+    border:1px solid rgba(226,232,240,0.8);
+  }
+  .panel h2{
+    font-size:13px; font-weight:800; color:var(--blue-mp);
+    text-transform:uppercase; letter-spacing:.6px;
+    margin:0 0 14px; padding-bottom:10px;
+    border-bottom:1px solid var(--border-color);
+  }
+  .panel .desc{font-size:12.5px; color:var(--text-muted); margin-bottom:16px; line-height:1.55;}
+
+  .controls{display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;}
+  button{
+    font-family:inherit; font-weight:750; font-size:13.5px;
+    padding:12px 20px; border-radius:14px; border:none; cursor:pointer;
+    transition:transform .15s ease, opacity .15s ease;
+    min-height:46px;
+  }
+  button.primary{
+    background:linear-gradient(135deg,var(--palette-deep-blue),var(--palette-royal-blue));
+    color:#fff; box-shadow:0 4px 14px rgba(4,42,114,0.25);
+  }
+  button.primary:active{transform:scale(0.97); opacity:0.92;}
+  button.ghost{
+    background:#f0f7ff; border:1.5px solid var(--palette-royal-blue);
+    color:var(--palette-royal-blue);
+  }
+  button.ghost:active{background:#e0f0ff; transform:scale(0.98);}
+  button:disabled{opacity:.45; cursor:not-allowed; transform:none;}
+
+  .field{display:flex; flex-direction:column; gap:5px;}
+  .field label{
+    font-size:10.5px; color:var(--text-muted); text-transform:uppercase;
+    letter-spacing:.4px; font-weight:750;
+  }
+  .field input, .field select{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    height:44px; padding:0 12px; border-radius:12px;
+    border:1.5px solid var(--border-color); font-size:13.5px; width:130px;
+    background:#fff; color:var(--text-main); transition:all .2s ease;
+  }
+  .field input:focus, .field select:focus{
+    outline:none; border-color:var(--accent);
+    box-shadow:0 0 0 4px rgba(72,112,255,0.12);
+  }
+
+  #progress-wrap{margin-top:16px; display:none;}
+  #progress-bar-bg{background:#e2e8f0; border-radius:8px; height:8px; overflow:hidden;}
+  #progress-bar{background:linear-gradient(90deg,var(--palette-deep-blue),var(--palette-royal-blue)); height:100%; width:0%; transition:width .25s ease;}
+  #progress-label{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:11.5px; color:var(--text-muted); margin-top:6px;}
+
+  #map{height:480px; border-radius:18px; border:1px solid var(--border-color); margin-bottom:0; overflow:hidden;}
+
+  .days-grid{display:flex; flex-direction:column; gap:16px;}
+
+  .ticket{
+    background:var(--card-bg);
+    border-radius:20px;
+    overflow:hidden;
+    border:1px solid var(--border-color);
+    box-shadow:0 4px 20px rgba(18,24,44,0.05);
+  }
+  .ticket-head{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:16px 20px; color:#fff;
+  }
+  .ticket-head .day-name{font-weight:850; font-size:15.5px; letter-spacing:-0.2px;}
+  .ticket-head .day-meta{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:11.5px; color:rgba(255,255,255,0.82); text-align:right; line-height:1.5;
+  }
+  .stops{padding:8px 12px 12px;}
+  .stop{
+    display:grid;
+    grid-template-columns:64px 24px 1fr auto;
+    align-items:center;
+    gap:12px;
+    padding:11px 12px;
+    background:#f8fafc;
+    border:1.5px solid #e2e8f0;
+    border-radius:14px;
+    margin-top:8px;
+  }
+  .stop.depot{background:#eef2f7; border-style:dashed;}
+  .stop .time{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight:750; font-size:12.5px; color:var(--blue-mp);}
+  .stop .num{
+    width:22px;height:22px;border-radius:50%;
+    background:var(--palette-royal-blue); color:#fff;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-weight:800; font-size:11px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .stop.depot .num{background:var(--palette-dark-navy);}
+  .stop .info .etab{font-weight:800; font-size:13.5px; color:var(--text-main);}
+  .stop .info .ville{font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.3px; margin-top:1px;}
+  .stop .maj{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:11px; font-weight:700; color:#0369a1;
+    background:#e0f2fe; padding:4px 9px; border-radius:9px; white-space:nowrap;
+  }
+  .stop input[type=checkbox]{width:19px;height:19px; accent-color:var(--ok); cursor:pointer;}
+  .stop.done{background:var(--ok-light); border-color:#bbf7d0;}
+  .stop.done .info .etab{text-decoration:line-through; color:#9ca3af;}
+
+  .warn-box{
+    background:var(--danger-light); border:1.5px solid #ffcdd3; color:var(--danger);
+    border-radius:14px; padding:12px 16px; font-size:12.5px; font-weight:600; margin-top:12px; line-height:1.5;
+  }
+
+  .legend{display:flex; gap:8px; flex-wrap:wrap; margin:14px 0 4px;}
+  .legend span{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:11px; font-weight:700;
+    display:inline-flex; align-items:center; gap:6px;
+    background:#eef2f7; color:#334155; padding:5px 10px; border-radius:9px;
+  }
+  .legend i{width:9px;height:9px;border-radius:50%; display:inline-block;}
+
+  footer{text-align:center; font-size:11px; color:#9ca3af; margin-top:26px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;}
+
+  .list-toggle{
+    font-size:12px; font-weight:700; color:var(--palette-royal-blue);
+    cursor:pointer; text-decoration:none; margin-top:10px; display:inline-block;
+  }
+  #raw-list{display:none; margin-top:14px;}
+  #raw-list table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  #raw-list th{text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.4px; font-weight:800; color:var(--text-muted); padding:7px 8px; border-bottom:2px solid var(--border-color);}
+  #raw-list td{padding:8px; border-bottom:1px solid #f1f5f9;}
+
+  /* ---- export buttons (Waze / Google Maps) ---- */
+  .export-row{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;}
+  .btn-export{
+    display:inline-flex; align-items:center; gap:7px;
+    padding:9px 14px; border-radius:12px; font-size:12.5px; font-weight:750;
+    border:1.5px solid var(--border-color); background:#f8fafc; color:var(--text-main);
+    cursor:pointer; text-decoration:none; min-height:38px;
+  }
+  .btn-export:active{transform:scale(0.97);}
+  .btn-export.waze{border-color:#8ec3f9; background:#eef6ff; color:#1a6fd6;}
+  .btn-export.gmaps{border-color:#a8dab5; background:#eefaf0; color:#1e7e34;}
+  .btn-export.copy{border-color:var(--border-color); color:var(--text-muted);}
+
+  /* ---- iPhone / mobile responsive ---- */
+  @supports (padding: max(0px)) {
+    header.top{ padding-top: max(34px, env(safe-area-inset-top)); }
+    body{ padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+  }
+  @media (max-width: 720px){
+    .wrap{ padding: 0 12px 60px; }
+    header.top{ padding: 24px 14px 22px; margin-bottom: 16px; }
+    h1{ font-size: 21px; }
+    .subtitle{ font-size: 12.5px; }
+    .stats-row{ gap: 8px; margin-top: 16px; }
+    .stat{ min-width: 46%; flex: 1 1 46%; padding: 10px 12px; }
+    .stat .n{ font-size: 19px; }
+    .panel{ padding: 16px; border-radius: 16px; }
+    .controls{ flex-direction: column; align-items: stretch; gap: 10px; }
+    .field{ width: 100% !important; }
+    .field input, .field select{ width: 100% !important; height: 46px; font-size: 15px; }
+    button{ width: 100%; justify-content: center; }
+    .export-row{ flex-direction: column; }
+    .btn-export{ width: 100%; justify-content: center; padding: 12px; font-size: 13.5px; }
+    #map{ height: 340px; }
+    .stop{
+      grid-template-columns: 44px 1fr;
+      grid-template-areas: "num info" "time info" "task task" "nav nav";
+      row-gap: 6px;
+    }
+    .stop .num{ grid-area: num; }
+    .stop .info{ grid-area: info; }
+    .stop .time{ grid-area: time; }
+    .stop .stop-task{ grid-area: task; display:flex !important; justify-content:space-between; }
+    .stop .stop-nav{ grid-area: nav; }
+    .stop.depot > div:last-child{ display:none; }
+    .ticket-head{ flex-direction: column; align-items: flex-start; gap: 6px; }
+    .ticket-head .day-meta{ text-align: left; }
+    #raw-list{ overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    #raw-list table{ min-width: 640px; }
+    #address-table > div > div{ grid-template-columns: 1fr !important; }
+  }
+
+  /* ---- tab bar ---- */
+  .tab-bar{
+    display:flex; gap:8px; margin-bottom:18px;
+    background:#eef1f5; border-radius:14px; padding:5px;
+  }
+  .tab-btn{
+    flex:1; padding:11px 16px; border:none; border-radius:10px;
+    background:transparent; color:var(--text-muted);
+    font-weight:750; font-size:13.5px; cursor:pointer;
+  }
+  .tab-btn.active{ background:#fff; color:var(--blue-mp); box-shadow:0 2px 8px rgba(18,24,44,0.08); }
+
+  /* ---- suivi (tracking) tab ---- */
+  .suivi-summary{ display:flex; gap:16px; flex-wrap:wrap; }
+  .suivi-card{
+    flex:1; min-width:220px; background:#f8fafc; border:1.5px solid var(--border-color);
+    border-radius:16px; padding:16px 18px;
+  }
+  .suivi-card-label{ font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.4px; color:var(--text-muted); margin-bottom:10px; }
+  .suivi-card-bar-bg{ background:#e2e8f0; border-radius:8px; height:10px; overflow:hidden; }
+  .suivi-card-bar{ height:100%; width:0%; transition:width .3s ease; }
+  .suivi-card-figures{ margin-top:8px; font-size:13px; font-weight:700; color:var(--text-main); }
+
+  #suivi-table table{ width:100%; border-collapse:collapse; font-size:13px; }
+  #suivi-table th{ text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.4px; font-weight:800; color:var(--text-muted); padding:8px; border-bottom:2px solid var(--border-color); position:sticky; top:0; background:#fff; }
+  #suivi-table td{ padding:9px 8px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+  #suivi-table .chip{ display:inline-flex; align-items:center; gap:5px; padding:4px 9px; border-radius:8px; font-size:11.5px; font-weight:750; white-space:nowrap; border:none; font-family:inherit; cursor:default; }
+  button.chip{ cursor:pointer; transition:transform .12s ease; }
+  button.chip:active{ transform:scale(0.95); }
+  #suivi-table .chip.done{ background:var(--ok-light); color:var(--ok); }
+  #suivi-table .chip.pending{ background:#fef2f2; color:var(--danger); }
+  #suivi-table .chip.na{ background:#f1f5f9; color:var(--text-muted); }
+  @media (max-width: 720px){
+    #suivi-table{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    #suivi-table table{ min-width:560px; }
+    .suivi-summary{ flex-direction:column; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="eyebrow">Zone JMS — Morin J.</div>
+    <h1>Carnet de tournée MAJ &amp; Inventaires Smartview</h1>
+    <div class="subtitle">Planification des visites pour la mise à jour logicielle et le contrôle d'inventaire des programmateurs. Trajets optimisés au départ de Tours, journées de 8h à 18h.</div>
+    <div class="stats-row">
+      <div class="stat"><div class="n" id="stat-centres">53</div><div class="l">Centres au total</div></div>
+      <div class="stat"><div class="n" id="stat-maj">68</div><div class="l">Programmateurs à MAJ</div></div>
+      <div class="stat"><div class="n" id="stat-inventaire">48</div><div class="l">Centres inventaire à faire</div></div>
+      <div class="stat"><div class="n" id="stat-types">18 / 100</div><div class="l">Orchestra+ / SmartTouch</div></div>
+      <div class="stat"><div class="n" id="stat-temps-maj">22h40</div><div class="l">Temps de MAJ (20min/u)</div></div>
+      <div class="stat"><div class="n" id="stat-jours">—</div><div class="l">Jours estimés</div></div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tab-btn-tournees" data-tab="tournees">📍 Tournées</button>
+    <button class="tab-btn" id="tab-btn-suivi" data-tab="suivi">📊 Suivi</button>
+  </div>
+
+  <div id="tab-tournees">
+
+  <div class="panel">
+    <h2>Calcul de la tournée</h2>
+    <div class="desc">Géocodage des centres (adresse précise si connue, via la Base Adresse Nationale/IGN — repli automatique sur la ville si l'adresse n'est pas trouvée) puis calcul des temps de trajet routiers (OSRM), avec répartition automatique en journées 8h–18h. Départ et retour : point de départ ci-dessous.</div>
+    <div class="controls" style="margin-bottom:14px;">
+      <div class="field" style="width:auto;">
+        <label>Objectif de la tournée</label>
+        <select id="tour-mode" style="width:260px;">
+          <option value="maj">Mises à jour logicielles (&lt; v3.24)</option>
+          <option value="inventaire">Inventaires physiques (état "à faire")</option>
+        </select>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="field">
+        <label>Point de départ</label>
+        <input id="depot-city" value="Tours, France"/>
+      </div>
+      <div class="field">
+        <label>Début journée</label>
+        <input id="day-start" value="08:00"/>
+      </div>
+      <div class="field">
+        <label>Fin journée</label>
+        <input id="day-end" value="18:00"/>
+      </div>
+      <div class="field" id="field-min-maj">
+        <label>Min / MAJ</label>
+        <input id="min-per-maj" value="20"/>
+      </div>
+      <div class="field" id="field-min-inv" style="display:none;">
+        <label>Min / article inventorié</label>
+        <input id="min-per-inv" value="5"/>
+      </div>
+      <button class="primary" id="btn-calc">Calculer les tournées</button>
+      <button class="ghost" id="btn-reset-progress">Réinitialiser le suivi</button>
+    </div>
+    <div id="progress-wrap">
+      <div id="progress-bar-bg"><div id="progress-bar"></div></div>
+      <div id="progress-label">—</div>
+    </div>
+    <div id="warn-area"></div>
+    <span class="list-toggle" id="toggle-raw">Voir la liste brute des centres ↓</span>
+    <div id="raw-list"></div>
+  </div>
+
+  <div class="panel" id="map-panel" style="display:none;">
+    <h2>Carte des tournées</h2>
+    <div class="legend" id="legend"></div>
+
+    <div id="map"></div>
+  </div>
+
+  <div id="days-container" class="days-grid"></div>
+
+  <div class="panel">
+    <h2>Nouveau tableau de données</h2>
+    <div class="desc">Remplace la liste actuelle par un nouveau fichier (mêmes colonnes que l'export d'origine : Etablissement, Localité, Code Article, Version du Smartview, Modèle...). Les centres déjà à jour dans le fichier n'entrent pas dans la tournée.</div>
+    <div class="controls">
+      <div class="field">
+        <label>Version cible</label>
+        <input id="target-version" value="3.24" style="width:80px;"/>
+      </div>
+      <div class="field">
+        <label>Fichier (.xlsx / .csv)</label>
+        <input type="file" id="file-import" accept=".xlsx,.xls,.csv" style="width:auto; padding:7px 4px;"/>
+      </div>
+      <button class="primary" id="btn-import">Charger ce fichier</button>
+      <button class="ghost" id="btn-restore-sample">Revenir au jeu de données exemple</button>
+    </div>
+    <div id="import-status" style="font-size:12.5px; color:var(--text-muted); margin-top:10px; font-weight:600;"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Carnet d'adresses</h2>
+    <div class="desc">Adresses précises utilisées pour le géocodage (plus fiable qu'une simple ville). Réutilisé automatiquement pour tout futur import tant que le nom d'établissement correspond. Modifiez un champ puis cliquez sur "Enregistrer le carnet".</div>
+    <div id="address-coverage" style="font-size:12.5px; font-weight:700; color:var(--blue-mp); margin-bottom:12px;"></div>
+    <div id="address-table"></div>
+    <div class="controls" style="margin-top:14px;">
+      <button class="primary" id="btn-save-addresses">Enregistrer le carnet</button>
+    </div>
+    <div id="address-status" style="font-size:12.5px; color:var(--text-muted); margin-top:10px; font-weight:600;"></div>
+  </div>
+
+  <footer>Outil interne · géocodage Nominatim/OSM · trajets OSRM · données stockées uniquement dans ce navigateur</footer>
+  </div>
+
+  <div id="tab-suivi" style="display:none;">
+    <div class="panel">
+      <h2>Avancement</h2>
+      <div class="desc">Récapitulatif de l'état des mises à jour logicielles et des inventaires physiques, centre par centre. Le dépôt personnel (MORIN J.) n'est pas compté ici.</div>
+
+      <div class="suivi-summary">
+        <div class="suivi-card">
+          <div class="suivi-card-label">Mises à jour logicielles</div>
+          <div class="suivi-card-bar-bg"><div class="suivi-card-bar" id="suivi-maj-bar" style="background:var(--palette-royal-blue);"></div></div>
+          <div class="suivi-card-figures" id="suivi-maj-figures">—</div>
+        </div>
+        <div class="suivi-card">
+          <div class="suivi-card-label">Inventaires physiques</div>
+          <div class="suivi-card-bar-bg"><div class="suivi-card-bar" id="suivi-inv-bar" style="background:var(--palette-plum-magenta);"></div></div>
+          <div class="suivi-card-figures" id="suivi-inv-figures">—</div>
+        </div>
+      </div>
+
+      <div class="controls" style="margin:16px 0;">
+        <div class="field" style="width:auto;">
+          <label>Filtrer</label>
+          <select id="suivi-filter" style="width:220px;">
+            <option value="all">Tous les centres</option>
+            <option value="pending">Reste au moins une tâche</option>
+            <option value="done">Entièrement terminés</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="suivi-table"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DEFAULT_CENTERS = [{"id": 0, "etablissement": "ACWD", "ville": "AMBOISE", "dept": "37", "nb_total": 1, "nb_maj": 1, "nb_orchestra": 0, "nb_smarttouch": 1, "etat_inventaire": "A FAIRE", "items": [{"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAB864548", "version": "3.16", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 1, "etablissement": "CH AGGLOMERATION MONTARGOISE", "ville": "AMILLY", "dept": "45", "nb_total": 1, "nb_maj": 1, "nb_orchestra": 0, "nb_smarttouch": 1, "etat_inventaire": "A FAIRE", "items": [{"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAB877144", "version": "3.18", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 2, "etablissement": "MR LE DR KHALDI H.", "ville": "AMILLY", "dept": "45", "nb_total": 1, "nb_maj": 1, "nb_orchestra": 0, "nb_smarttouch": 1, "etat_inventaire": "A FAIRE", "items": [{"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAC620530", "version": "3.18", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 3, "etablissement": "MAISON DE SANTE", "ville": "ARGENTON SUR CREUSE", "dept": "36", "nb_total": 1, "nb_maj": 1, "nb_orchestra": 1, "nb_smarttouch": 0, "etat_inventaire": "A FAIRE", "items": [{"article": "KA311", "designation": "ORCHESTRA+", "lot": "NA0803102K", "version": "3.22", "etat": "A FAIRE", "type": "ORCHESTRA+", "qte_theo": 1, "qte_compte": null}]}, {"id": 4, "etablissement": "CENTRE HOSPITALIER AUBUSSON", "ville": "AUBUSSON", "dept": "23", "nb_total": 1, "nb_maj": 1, "nb_orchestra": 0, "nb_smarttouch": 1, "etat_inventaire": "A FAIRE", "items": [{"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAC598343", "version": "3.22", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 5, "etablissement": "CH DE BELLAC", "ville": "BELLAC", "dept": "87", "nb_total": 1, "nb_maj": 1, "nb_orchestra": 1, "nb_smarttouch": 0, "etat_inventaire": "A FAIRE", "items": [{"article": "KA311", "designation": "ORCHESTRA+", "lot": "NA0810079K", "version": "3.22", "etat": "A FAIRE", "type": "ORCHESTRA+", "qte_theo": 1, "qte_compte": null}]}, {"id": 6, "etablissement": "CENTRE HOSPITALIER BLOIS", "ville": "BLOIS CEDEX", "dept": "41", "nb_total": 5, "nb_maj": 1, "nb_orchestra": 2, "nb_smarttouch": 3, "etat_inventaire": "FAIT", "items": [{"article": "KA311", "designation": "ORCHESTRA+", "lot": "NB0906017K", "version": "3.24", "etat": "FAIT", "type": "ORCHESTRA+", "qte_theo": 1, "qte_compte": null}, {"article": "KA311", "designation": "ORCHESTRA+", "lot": "NB1001015K", "version": "3.22", "etat": "FAIT", "type": "ORCHESTRA+", "qte_theo": 1, "qte_compte": null}, {"article": "TPR012C", "designation": "Smart Touch Tablet", "lot": "GSAB656522", "version": "3.24", "etat": "FAIT", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "TPR022C", "designation": "Smart Touch Tablet", "lot": "GSAB744940", "version": "3.24", "etat": "FAIT", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAB813564", "version": "3.24", "etat": "FAIT", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 7, "etablissement": "MR LE DR PELLERIN F.", "ville": "BOURGES", "dept": "18", "nb_total": 1, "nb_maj": 1, "nb_orchestra": 0, "nb_smarttouch": 1, "etat_inventaire": "A FAIRE", "items": [{"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAC231487", "version": "3.22", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 8, "etablissement": "CH JACQUES COEUR / BOURGES", "ville": "BOURGES CEDEX", "dept": "18", "nb_total": 7, "nb_maj": 1, "nb_orchestra": 1, "nb_smarttouch": 6, "etat_inventaire": "A FAIRE", "items": [{"article": "KA311", "designation": "ORCHESTRA+", "lot": "ND1803020K", "version": "3.24", "etat": "A FAIRE", "type": "ORCHESTRA+", "qte_theo": 1, "qte_compte": null}, {"article": "TPR002C", "designation": "Smart Touch Tablet", "lot": "GSD7382606", "version": "3.24", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "TPR012C", "designation": "Smart Touch Tablet", "lot": "GSAB666196", "version": "3.24", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAB816713", "version": "3.24", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAB844138", "version": "3.24", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAC000697", "version": "3.16", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAC126329", "version": "3.24", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 9, "etablissement": "CENTRE HOSPITALIER CHATEAUROUX", "ville": "CHATEAUROUX", "dept": "36", "nb_total": 2, "nb_maj": 0, "nb_orchestra": 0, "nb_smarttouch": 2, "etat_inventaire": "FAIT", "items": [{"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAC332376", "version": "3.24", "etat": "FAIT", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAC432546", "version": "3.24", "etat": "FAIT", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 10, "etablissement": "SELARL DU DOCTEUR BENFREHA K.", "ville": "CHATEAUROUX", "dept": "36", "nb_total": 2, "nb_maj": 2, "nb_orchestra": 0, "nb_smarttouch": 2, "etat_inventaire": "A FAIRE", "items": [{"article": "TPR012C", "designation": "Smart Touch Tablet", "lot": "GSAB656527", "version": "3.14", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAC262590", "version": "3.22", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 11, "etablissement": "CLINIQUE DE CHATELLERAULT", "ville": "CHATELLERAULT", "dept": "86", "nb_total": 2, "nb_maj": 2, "nb_orchestra": 2, "nb_smarttouch": 0, "etat_inventaire": "A FAIRE", "items": [{"article": "KA301", "designation": "ORCHESTRA+", "lot": "NA0612053K", "version": "3.16", "etat": "A FAIRE", "type": "ORCHESTRA+", "qte_theo": 1, "qte_compte": null}, {"article": "KA311", "designation": "ORCHESTRA+", "lot": "NA0807067K", "version": "3.16", "etat": "A FAIRE", "type": "ORCHESTRA+", "qte_theo": 1, "qte_compte": null}]}, {"id": 12, "etablissement": "MME LE DR CLOUARD M.", "ville": "CHATELLERAULT", "dept": "86", "nb_total": 1, "nb_maj": 1, "nb_orchestra": 0, "nb_smarttouch": 1, "etat_inventaire": "A FAIRE", "items": [{"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAC598361", "version": "3.16", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 13, "etablissement": "GROUPE HOSPITALIER NORD VIENNE", "ville": "CHATELLERAULT CEDEX", "dept": "86", "nb_total": 1, "nb_maj": 0, "nb_orchestra": 0, "nb_smarttouch": 1, "etat_inventaire": "A FAIRE", "items": [{"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAB816791", "version": "3.24", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 14, "etablissement": "CENTRE HOSPITALIER DE GUERET", "ville": "GUERET", "dept": "23", "nb_total": 2, "nb_maj": 2, "nb_orchestra": 0, "nb_smarttouch": 2, "etat_inventaire": "A FAIRE", "items": [{"article": "TPR002C", "designation": "Smart Touch Tablet", "lot": "GSD7398016", "version": "3.22", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "TPR022C", "designation": "Smart Touch Tablet", "lot": "GSAB744888", "version": "3.22", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 15, "etablissement": "MME LE DR DEMAISON P.", "ville": "GUERET", "dept": "23", "nb_total": 1, "nb_maj": 1, "nb_orchestra": 0, "nb_smarttouch": 1, "etat_inventaire": "A FAIRE", "items": [{"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAB813516", "version": "3.22", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 16, "etablissement": "MR LE DR PENOT JP.", "ville": "LA SOUTERRAINE", "dept": "23", "nb_total": 2, "nb_maj": 2, "nb_orchestra": 0, "nb_smarttouch": 2, "etat_inventaire": "A FAIRE", "items": [{"article": "TPR022C", "designation": "Smart Touch Tablet", "lot": "GSAB744965", "version": "3.22", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAC332493", "version": "3.22", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 17, "etablissement": "MME LE DR DOUZON A.", "ville": "LANOUAILLE", "dept": "24", "nb_total": 1, "nb_maj": 1, "nb_orchestra": 0, "nb_smarttouch": 1, "etat_inventaire": "A FAIRE", "items": [{"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAC231465", "version": "3.16", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 18, "etablissement": "CHRU DUPUYTREN", "ville": "LIMOGES", "dept": "87", "nb_total": 5, "nb_maj": 1, "nb_orchestra": 1, "nb_smarttouch": 4, "etat_inventaire": "A FAIRE", "items": [{"article": "KA301", "designation": "ORCHESTRA+", "lot": "NA0706055K", "version": "3.22", "etat": "A FAIRE", "type": "ORCHESTRA+", "qte_theo": 1, "qte_compte": null}, {"article": "TPR002C", "designation": "Smart Touch Tablet", "lot": "GSD7398650", "version": "3.24", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "TPR002C", "designation": "Smart Touch Tablet", "lot": "GSD7444724", "version": "3.24", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "TPR022C", "designation": "Smart Touch Tablet", "lot": "GSD7382694", "version": "3.24", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAB834158", "version": "3.24", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 19, "etablissement": "SCM EMAILLEURS CARDIOLOGIE", "ville": "LIMOGES CEDEX", "dept": "87", "nb_total": 3, "nb_maj": 3, "nb_orchestra": 0, "nb_smarttouch": 3, "etat_inventaire": "A FAIRE", "items": [{"article": "TPR002C", "designation": "Smart Touch Tablet", "lot": "GSD7339702", "version": "3.22", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "TPR012C", "designation": "Smart Touch Tablet", "lot": "GSAB663770", "version": "3.22", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "TPR012C", "designation": "Smart Touch Tablet", "lot": "GSAB666210", "version": "3.22", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 20, "etablissement": "SELARL COEUR & VAISSEAUX", "ville": "LIMOGES CEDEX 1", "dept": "87", "nb_total": 4, "nb_maj": 4, "nb_orchestra": 1, "nb_smarttouch": 3, "etat_inventaire": "A FAIRE", "items": [{"article": "KA311", "designation": "ORCHESTRA+", "lot": "NA0803098K", "version": "3.12", "etat": "A FAIRE", "type": "ORCHESTRA+", "qte_theo": 1, "qte_compte": null}, {"article": "TPR002C", "designation": "Smart Touch Tablet", "lot": "GSD7382595", "version": "3.22", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "TPR033C", "designation": "Smart Touch Tablet", "lot": "GSAB741377", "version": "3.22", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAC422499", "version": "3.22", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 21, "etablissement": "CH RENAUDOT/LOUDUN", "ville": "LOUDUN", "dept": "86", "nb_total": 1, "nb_maj": 1, "nb_orchestra": 0, "nb_smarttouch": 1, "etat_inventaire": "A FAIRE", "items": [{"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAB864572", "version": "3.16", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 22, "etablissement": "MR LE DR AGENOR P.", "ville": "LOUDUN", "dept": "86", "nb_total": 1, "nb_maj": 1, "nb_orchestra": 1, "nb_smarttouch": 0, "etat_inventaire": "A FAIRE", "items": [{"article": "KA301", "designation": "ORCHESTRA+", "lot": "NA0706065K", "version": "3.18", "etat": "A FAIRE", "type": "ORCHESTRA+", "qte_theo": 1, "qte_compte": null}]}, {"id": 23, "etablissement": "MR LE DR EL GHELBAZOURI F.", "ville": "MONTARGIS", "dept": "45", "nb_total": 1, "nb_maj": 1, "nb_orchestra": 0, "nb_smarttouch": 1, "etat_inventaire": "A FAIRE", "items": [{"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAC262545", "version": "3.18", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 24, "etablissement": "MR LE DR LEHNERT F.", "ville": "MONTARGIS", "dept": "45", "nb_total": 1, "nb_maj": 1, "nb_orchestra": 0, "nb_smarttouch": 1, "etat_inventaire": "A FAIRE", "items": [{"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAC126322", "version": "3.18", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 25, "etablissement": "MORIN J.", "ville": "MONTBAZON", "dept": "37", "nb_total": 12, "nb_maj": 12, "nb_orchestra": 0, "nb_smarttouch": 12, "etat_inventaire": "A FAIRE", "items": [{"article": "TPR002C", "designation": "Smart Touch Tablet", "lot": "GSD7338947", "version": "3.14", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "TPR003C", "designation": "Smart Touch Tablet", "lot": "GSD7444111", "version": "3.22", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "TPR032C", "designation": "Smart Touch Tablet", "lot": "GSAB810617", "version": "3.18", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "TPR034C", "designation": "Smart Touch Tablet", "lot": "GSAB810512", "version": "3.18", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "TPR051C", "designation": "Smart Touch Tablet", "lot": "GSAC060828", "version": "3.22", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "TPR052C", "designation": "Smart Touch Tablet", "lot": "GSAC513350", "version": "3.22", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "TPR052C", "designation": "Smart Touch Tablet", "lot": "GSAC513357", "version": "3.22", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAB813571", "version": "3.18", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAB816608", "version": "3.14", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAB864545", "version": "3.22", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAC643590", "version": "3.14", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAC643706", "version": "3.14", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 26, "etablissement": "C.H. DE MONTMORILLON", "ville": "MONTMORILLON CEDEX", "dept": "86", "nb_total": 1, "nb_maj": 1, "nb_orchestra": 0, "nb_smarttouch": 1, "etat_inventaire": "A FAIRE", "items": [{"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAB877041", "version": "3.22", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 27, "etablissement": "MR LE DR N'GUYEN D.", "ville": "OLIVET", "dept": "45", "nb_total": 2, "nb_maj": 2, "nb_orchestra": 1, "nb_smarttouch": 1, "etat_inventaire": "A FAIRE", "items": [{"article": "KA311", "designation": "ORCHESTRA+", "lot": "ND1505010K", "version": "3.16", "etat": "A FAIRE", "type": "ORCHESTRA+", "qte_theo": 1, "qte_compte": null}, {"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAB877126", "version": "3.16", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 28, "etablissement": "MR LE DR DIBON O.", "ville": "ORLEANS", "dept": "45", "nb_total": 1, "nb_maj": 1, "nb_orchestra": 0, "nb_smarttouch": 1, "etat_inventaire": "A FAIRE", "items": [{"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAC620550", "version": "3.16", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 29, "etablissement": "MR LE DR KAMOUN M.", "ville": "ORLEANS", "dept": "45", "nb_total": 1, "nb_maj": 1, "nb_orchestra": 0, "nb_smarttouch": 1, "etat_inventaire": "A FAIRE", "items": [{"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAC429781", "version": "3.16", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 30, "etablissement": "CHR ORLEANS", "ville": "ORLEANS CEDEX", "dept": "45", "nb_total": 3, "nb_maj": 1, "nb_orchestra": 0, "nb_smarttouch": 3, "etat_inventaire": "A FAIRE", "items": [{"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAB877145", "version": "3.22", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAC000701", "version": "3.24", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAC506295", "version": "3.24", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 31, "etablissement": "DRS CHABRUN, ANZID, EDER, LLATY", "ville": "POITIERS", "dept": "86", "nb_total": 2, "nb_maj": 0, "nb_orchestra": 0, "nb_smarttouch": 2, "etat_inventaire": "A FAIRE", "items": [{"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAC126414", "version": "3.24", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAC231445", "version": "3.24", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 32, "etablissement": "MME LE DR EDER V.", "ville": "POITIERS", "dept": "86", "nb_total": 1, "nb_maj": 1, "nb_orchestra": 0, "nb_smarttouch": 1, "etat_inventaire": "A FAIRE", "items": [{"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAC262659", "version": "3.22", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 33, "etablissement": "MRS LES DRS DEVALUEZ & QUERON", "ville": "POITIERS", "dept": "86", "nb_total": 2, "nb_maj": 2, "nb_orchestra": 0, "nb_smarttouch": 2, "etat_inventaire": "A FAIRE", "items": [{"article": "TPR014C", "designation": "Smart Touch Tablet", "lot": "GSAB663821", "version": "3.22", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAB864554", "version": "3.22", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 34, "etablissement": "POLYCLINIQUE DE POITIERS", "ville": "POITIERS", "dept": "86", "nb_total": 2, "nb_maj": 2, "nb_orchestra": 1, "nb_smarttouch": 1, "etat_inventaire": "A FAIRE", "items": [{"article": "KA311", "designation": "ORCHESTRA+", "lot": "NA0710113K", "version": "3.22", "etat": "A FAIRE", "type": "ORCHESTRA+", "qte_theo": 1, "qte_compte": null}, {"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAB816780", "version": "3.22", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 35, "etablissement": "CH POITIERS", "ville": "POITIERS CEDEX", "dept": "86", "nb_total": 8, "nb_maj": 1, "nb_orchestra": 1, "nb_smarttouch": 7, "etat_inventaire": "A FAIRE", "items": [{"article": "KA311", "designation": "ORCHESTRA+", "lot": "NA0807059K", "version": "3.22", "etat": "A FAIRE", "type": "ORCHESTRA+", "qte_theo": 1, "qte_compte": null}, {"article": "TPR002C", "designation": "Smart Touch Tablet", "lot": "GSD7382571", "version": "3.24", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "TPR002C", "designation": "Smart Touch Tablet", "lot": "GSD7439562", "version": "3.24", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "TPR002C", "designation": "Smart Touch Tablet", "lot": "GSD7443677", "version": "3.24", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "TPR002C", "designation": "Smart Touch Tablet", "lot": "GSD7444699", "version": "3.24", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "TPR012C", "designation": "Smart Touch Tablet", "lot": "GSAB666223", "version": "3.24", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "TPR012C", "designation": "Smart Touch Tablet", "lot": "GSAB731190", "version": "3.24", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "TPR051C", "designation": "Smart Touch Tablet", "lot": "GSAC060808", "version": "3.24", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 36, "etablissement": "MME LE DR ANYS S.", "ville": "ROMORANTIN", "dept": "41", "nb_total": 1, "nb_maj": 1, "nb_orchestra": 0, "nb_smarttouch": 1, "etat_inventaire": "A FAIRE", "items": [{"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAB816641", "version": "3.16", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 37, "etablissement": "NOUVELLE CLINIQUE TOURS PLUS", "ville": "SAINT CYR SUR LOIRE", "dept": "37", "nb_total": 5, "nb_maj": 0, "nb_orchestra": 0, "nb_smarttouch": 5, "etat_inventaire": "FAIT", "items": [{"article": "TPR002C", "designation": "Smart Touch Tablet", "lot": "GSD7443676", "version": "3.24", "etat": "FAIT", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAB813536", "version": "3.24", "etat": "FAIT", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAB813544", "version": "3.24", "etat": "FAIT", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAB816660", "version": "3.24", "etat": "FAIT", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAC643576", "version": "3.24", "etat": "FAIT", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 38, "etablissement": "MGEN", "ville": "SAINT-FEYRE", "dept": "23", "nb_total": 1, "nb_maj": 1, "nb_orchestra": 1, "nb_smarttouch": 0, "etat_inventaire": "A FAIRE", "items": [{"article": "KA311", "designation": "ORCHESTRA+", "lot": "NA0712015K", "version": "3.16", "etat": "A FAIRE", "type": "ORCHESTRA+", "qte_theo": 1, "qte_compte": null}]}, {"id": 39, "etablissement": "GCS HPON", "ville": "SARAN", "dept": "45", "nb_total": 5, "nb_maj": 0, "nb_orchestra": 0, "nb_smarttouch": 5, "etat_inventaire": "FAIT", "items": [{"article": "TPR002C", "designation": "Smart Touch Tablet", "lot": "GSD7339640", "version": "3.24", "etat": "FAIT", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "TPR002C", "designation": "Smart Touch Tablet", "lot": "GSD7339663", "version": "3.24", "etat": "FAIT", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "TPR002C", "designation": "Smart Touch Tablet", "lot": "GSD7439459", "version": "3.24", "etat": "FAIT", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "TPR002C", "designation": "Smart Touch Tablet", "lot": "GSD7439957", "version": "3.24", "etat": "FAIT", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAC603754", "version": "3.24", "etat": "FAIT", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 40, "etablissement": "MME LE DR NADAL M.", "ville": "ST AMAND MONTROND", "dept": "18", "nb_total": 1, "nb_maj": 1, "nb_orchestra": 0, "nb_smarttouch": 1, "etat_inventaire": "A FAIRE", "items": [{"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAC422490", "version": "3.16", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 41, "etablissement": "MR LE DR LEQUEUX B.", "ville": "ST BENOIT", "dept": "86", "nb_total": 1, "nb_maj": 1, "nb_orchestra": 0, "nb_smarttouch": 1, "etat_inventaire": "A FAIRE", "items": [{"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAB864690", "version": "3.22", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 42, "etablissement": "MR LE DR MILLET JF.", "ville": "ST DOULCHARD", "dept": "18", "nb_total": 1, "nb_maj": 1, "nb_orchestra": 1, "nb_smarttouch": 0, "etat_inventaire": "A FAIRE", "items": [{"article": "KA311", "designation": "ORCHESTRA+", "lot": "NA0805034K", "version": "3.16", "etat": "A FAIRE", "type": "ORCHESTRA+", "qte_theo": 1, "qte_compte": null}]}, {"id": 43, "etablissement": "CH ST JUNIEN", "ville": "ST JUNIEN CEDEX", "dept": "87", "nb_total": 2, "nb_maj": 2, "nb_orchestra": 0, "nb_smarttouch": 2, "etat_inventaire": "A FAIRE", "items": [{"article": "TPR002C", "designation": "Smart Touch Tablet", "lot": "GSD7443657", "version": "3.22", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAB877087", "version": "3.22", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 44, "etablissement": "CH JACQUES BOUTARD", "ville": "ST YRIEIX LA PERCHE", "dept": "87", "nb_total": 1, "nb_maj": 1, "nb_orchestra": 1, "nb_smarttouch": 0, "etat_inventaire": "A FAIRE", "items": [{"article": "KA301", "designation": "ORCHESTRA+", "lot": "NA0701027K", "version": "3.16", "etat": "A FAIRE", "type": "ORCHESTRA+", "qte_theo": 1, "qte_compte": null}]}, {"id": 45, "etablissement": "MR LE DR DARY P.", "ville": "ST YRIEIX LA PERCHE", "dept": "87", "nb_total": 1, "nb_maj": 1, "nb_orchestra": 0, "nb_smarttouch": 1, "etat_inventaire": "A FAIRE", "items": [{"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAC262693", "version": "3.16", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 46, "etablissement": "MME LE DR DELPLACE C.", "ville": "TOURS", "dept": "37", "nb_total": 1, "nb_maj": 0, "nb_orchestra": 1, "nb_smarttouch": 0, "etat_inventaire": "A FAIRE", "items": [{"article": "KA301", "designation": "ORCHESTRA+", "lot": "NA0701044K", "version": "3.24", "etat": "A FAIRE", "type": "ORCHESTRA+", "qte_theo": 1, "qte_compte": null}]}, {"id": 47, "etablissement": "MR LE DR HAMEL E.", "ville": "TOURS", "dept": "37", "nb_total": 1, "nb_maj": 1, "nb_orchestra": 0, "nb_smarttouch": 1, "etat_inventaire": "A FAIRE", "items": [{"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAB834159", "version": "3.14", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 48, "etablissement": "MR LE DR MARIE O.", "ville": "TOURS", "dept": "37", "nb_total": 1, "nb_maj": 0, "nb_orchestra": 0, "nb_smarttouch": 1, "etat_inventaire": "A FAIRE", "items": [{"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAB877091", "version": "3.24", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 49, "etablissement": "MR LE DR NEEL G.", "ville": "TOURS", "dept": "37", "nb_total": 1, "nb_maj": 0, "nb_orchestra": 0, "nb_smarttouch": 1, "etat_inventaire": "FAIT", "items": [{"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAC000768", "version": "3.24", "etat": "FAIT", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 50, "etablissement": "CHRU DE TOURS - TROUSSEAU", "ville": "TOURS CEDEX 09", "dept": "37", "nb_total": 7, "nb_maj": 0, "nb_orchestra": 0, "nb_smarttouch": 7, "etat_inventaire": "A FAIRE", "items": [{"article": "TPR002C", "designation": "Smart Touch Tablet", "lot": "GSD7382598", "version": "3.24", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "TPR002C", "designation": "Smart Touch Tablet", "lot": "GSD7439473", "version": "3.24", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "TPR002C", "designation": "Smart Touch Tablet", "lot": "GSD7439880", "version": "3.24", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "TPR013C", "designation": "Smart Touch Tablet", "lot": "GSAB656551", "version": "3.24", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "TPR052C", "designation": "Smart Touch Tablet", "lot": "GSAC060845", "version": "3.24", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAB877092", "version": "3.24", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}, {"article": "V167", "designation": "Smart Touch Tablet", "lot": "TPAC620482", "version": "3.24", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 51, "etablissement": "MR LE DR PIECHACZYK P.", "ville": "VENDOME", "dept": "41", "nb_total": 1, "nb_maj": 1, "nb_orchestra": 0, "nb_smarttouch": 1, "etat_inventaire": "A FAIRE", "items": [{"article": "TPR023C", "designation": "Smart Touch Tablet", "lot": "GSAB801565", "version": "3.16", "etat": "A FAIRE", "type": "SMART TOUCH", "qte_theo": 1, "qte_compte": null}]}, {"id": 52, "etablissement": "CH VIERZON", "ville": "VIERZON", "dept": "18", "nb_total": 1, "nb_maj": 1, "nb_orchestra": 1, "nb_smarttouch": 0, "etat_inventaire": "A FAIRE", "items": [{"article": "KA311", "designation": "ORCHESTRA+", "lot": "NB0909014K", "version": "3.16", "etat": "A FAIRE", "type": "ORCHESTRA+", "qte_theo": 1, "qte_compte": null}]}];
+
+const DEFAULT_ADDRESS_BOOK = {"ACWD": "3 Av. des Martyrs de la Résistance, 37400 Amboise", "C.H. DE MONTMORILLON": "2 Rue Henri Dunant, 86500 Montmorillon", "CENTRE HOSPITALIER BLOIS": "Mail Pierre Charlot, 41000 Blois", "CENTRE HOSPITALIER CHATEAUROUX": "216 Av. de Verdun, 36000 Châteauroux", "CENTRE HOSPITALIER DE GUERET": "39 Av. de la Senatorerie, 23000 Guéret", "CH AGGLOMERATION MONTARGOISE": "658 Rue des Bourgoins, 45200 Amilly", "CH DE BELLAC": "4 Av. Charles de Gaulle, 87300 Bellac", "CH JACQUES BOUTARD": "5 Place du President Magnaud, 87500 Saint-Yrieix-la-Perche", "CH JACQUES COEUR / BOURGES": "145 Av. François Mitterrand, 18000 Bourges", "CHU POITIERS": "Av. du Professeur Jean Bernard, 86000 Poitiers", "CH RENAUDOT/LOUDUN": "3 Rue des Visitandines, 86200 Loudun", "CH ST JUNIEN": "12 Rue Châteaubriand, 87200 Saint-Junien", "CH VIERZON": "33 Rue Léo Mérigot, 18100 Vierzon", "CHU ORLEANS": "14 Av. de l'Hôpital, 45100 Orléans", "CHU DE TOURS - TROUSSEAU": "Av. de la République, 37170 Chambray-lès-Tours", "CHU DUPUYTREN": "16 Rue Bernard Descottes, 87042 Limoges", "CLINIQUE DE CHATELLERAULT": "17 Rue de Verdun, 86100 Châtellerault", "DRS CHABRUN, ANZID, EDER, LLATY": "50 Av. Jacques Cœur, 86000 Poitiers", "GCS HPON": "555 Av. Jacqueline Auriol, 45770 Saran", "GROUPE HOSPITALIER NORD VIENNE": "Rue Du Docteur Luc Montagnier, 86100 Châtellerault", "MAISON DE SANTE": "Rue de la Sablière, 36200 Argenton-sur-Creuse", "MGEN": "4 Les Bains, 23000 Sainte-Feyre", "MME LE DR ANYS S.": "20 Fbg Saint-Roch, 41201 Romorantin-Lanthenay", "MME LE DR CLOUARD M.": "20 Av. Jean Jaurès, 86100 Châtellerault", "MME LE DR DELPLACE C.": "53 Bd Béranger, 37000 Tours", "MME LE DR DEMAISON P.": "62 Av. Gambetta, 23000 Guéret", "MME LE DR DOUZON A.": "All. des Tilleuls, 24270 Lanouaille", "MME LE DR EDER V.": "50 Av. Jacques Cœur, 86000 Poitiers", "MME LE DR NADAL M.": "77 Av. Jean Jaurès, 18200 Saint-Amand-Montrond", "MR LE DR AGENOR P.": "22 Av. de Leuze, 86200 Loudun", "MR LE DR BENIA K.": "1 Rue d'Ouzouer, 45290 Varennes-Changy", "MR LE DR DARY P.": "8 Av. Michel Gondinet, 87500 Saint-Yrieix-la-Perche", "MR LE DR DIBON O.": "69 Bd Marie Stuart, 45000 Orléans", "MR LE DR EL GHELBAZOURI F.": "46 Rue de la Quintaine, 45200 Montargis", "MR LE DR HAMEL E.": "1 Rue des Ursulines, 37000 Tours", "MR LE DR KAMOUN M.": "5 Rue Paul Lemesle, 45000 Orléans", "MR LE DR KHALDI H.": "32 Rue Vincent Scotto, 45200 Amilly", "MR LE DR LEHNERT F.": "61 Rue André Coquillet, 45200 Montargis", "MR LE DR LEQUEUX B.": "11 All. de la Calypso, 86280 Saint-Benoît", "MR LE DR MARIE O.": "53 Bd Béranger, 37000 Tours", "MR LE DR MILLET JF.": "210 Rte de Vouzeron, 18230 Saint-Doulchard", "MR LE DR NEEL G.": "18 Rue Édouard Vaillant, 37000 Tours", "MR LE DR N'GUYEN D.": "83 Rue Jacques Monod, 45160 Olivet", "MR LE DR PELLERIN F.": "3 Rue Jean François Champollion, 18000 Bourges", "MR LE DR PENOT JP.": "12 Av. Pasteur, 23300 La Souterraine", "MR LE DR PIECHACZYK P.": "45 Bd du Président Roosevelt, 41100 Vendôme", "MRS LES DRS DEVALUEZ & QUERON": "19 Rue de Slovénie, 86000 Poitiers", "NOUVELLE CLINIQUE TOURS PLUS": "1 Bd Alfred Nobel, 37540 Saint-Cyr-sur-Loire", "POLYCLINIQUE DE POITIERS": "1 Rue de la Providence, 86000 Poitiers", "SCM EMAILLEURS CARDIOLOGIE": "1 Rue Victor Schoelcher, 87000 Limoges", "SELARL COEUR & VAISSEAUX": "18 Rue du Général Catroux, 87000 Limoges", "SELARL DU DOCTEUR BENFREHA K.": "8 Rue du Grand Mouton, 36000 Châteauroux", "CHR ORLEANS": "14 Av. de l'Hôpital, 45100 Orléans", "CH POITIERS": "Av. du Professeur Jean Bernard, 86000 Poitiers", "CHRU DUPUYTREN": "16 Rue Bernard Descottes, 87042 Limoges", "CHRU DE TOURS - TROUSSEAU": "Av. de la République, 37170 Chambray-lès-Tours"};
+let CENTERS = DEFAULT_CENTERS;
+const MINUTES_PER_MAJ_DEFAULT = 20;
+const MINUTES_PER_INV_DEFAULT = 5;
+let geoCache = {};
+let progress = {};
+let addressBook = {}; // établissement (upper) -> adresse complète
+let dayColors = ['#c72676','#802cf1','#00b8cc','#4870ff','#ff144b','#0e7490','#a16207','#166534'];
+
+// ---------- persistence helpers ----------
+const GEOCODER_CACHE_VERSION = 'geopf-v1'; // bump to force a fresh re-geocode of everything
+
+async function loadStorage(){
+  try{
+    const p = await window.storage.get('progress');
+    progress = p ? JSON.parse(p.value) : {};
+  }catch(e){ progress = {}; }
+  try{
+    const v = await window.storage.get('geocache-version');
+    if(v && v.value === GEOCODER_CACHE_VERSION){
+      const g = await window.storage.get('geocache');
+      geoCache = g ? JSON.parse(g.value) : {};
+    } else {
+      // geocoding source changed since this cache was built — start fresh so every
+      // center is looked up again with the new, more reliable French address API
+      geoCache = {};
+      await window.storage.set('geocache-version', GEOCODER_CACHE_VERSION);
+    }
+  }catch(e){ geoCache = {}; }
+  try{
+    const d = await window.storage.get('centers-dataset');
+    if(d){ CENTERS = JSON.parse(d.value); }
+  }catch(e){ /* no custom dataset yet, keep DEFAULT_CENTERS */ }
+  try{
+    const a = await window.storage.get('address-book');
+    addressBook = a ? JSON.parse(a.value) : {...DEFAULT_ADDRESS_BOOK};
+  }catch(e){ addressBook = {...DEFAULT_ADDRESS_BOOK}; }
+}
+async function saveProgress(){
+  try{ await window.storage.set('progress', JSON.stringify(progress)); }catch(e){ console.error(e); }
+}
+async function saveGeoCache(){
+  try{ await window.storage.set('geocache', JSON.stringify(geoCache)); }catch(e){ console.error(e); }
+}
+async function saveDataset(){
+  try{ await window.storage.set('centers-dataset', JSON.stringify(CENTERS)); }catch(e){ console.error(e); }
+}
+async function saveAddressBook(){
+  try{ await window.storage.set('address-book', JSON.stringify(addressBook)); }catch(e){ console.error(e); }
+}
+// MORIN J. (Montbazon dans le fichier) est en réalité le dépôt personnel du technicien à Tours :
+// ce n'est pas un site client à visiter, donc on l'exclut des tournées tout en le gardant visible
+// dans les listes/stats pour le suivi de stock.
+function isDepotCenter(center){
+  return center.etablissement.trim().toUpperCase() === 'MORIN J.';
+}
+function addressFor(center){
+  const key = center.etablissement.trim().toUpperCase();
+  return addressBook[key] || null;
+}
+
+// ---------- raw list ----------
+function renderRawList(){
+  const el = document.getElementById('raw-list');
+  let rows = CENTERS.slice().sort((a,b)=>a.ville.localeCompare(b.ville));
+  let html = '<table><tr><th>Établissement</th><th>Ville</th><th>Programmateurs</th><th>Type</th><th>MAJ à faire</th><th>Inventaire</th></tr>';
+  rows.forEach(c=>{
+    const typeStr = [
+      c.nb_orchestra ? `${c.nb_orchestra} Orchestra+` : '',
+      c.nb_smarttouch ? `${c.nb_smarttouch} SmartTouch` : ''
+    ].filter(Boolean).join(' · ');
+    const depot = isDepotCenter(c);
+    const etatBadge = depot
+      ? '<span style="color:var(--blue-mp); font-weight:800;">🏠 Dépôt (Tours) — hors tournée</span>'
+      : c.etat_inventaire === 'A FAIRE'
+        ? '<span style="color:var(--danger); font-weight:800;">À faire</span>'
+        : c.etat_inventaire === 'FAIT'
+          ? '<span style="color:var(--ok); font-weight:800;">Fait</span>'
+          : '<span style="color:var(--text-muted);">Mixte / inconnu</span>';
+    const rowStyle = depot ? ' style="background:#f8fafc;"' : '';
+    html += `<tr${rowStyle}><td>${c.etablissement}${depot?' <span style="font-size:10.5px; color:var(--text-muted); text-transform:uppercase;">(stock)</span>':''}</td><td>${c.ville}</td><td>${c.nb_total ?? c.nb_maj}</td><td>${typeStr || '—'}</td><td>${c.nb_maj}</td><td>${etatBadge}</td></tr>`;
+  });
+  html += '</table>';
+  el.innerHTML = html;
+  document.getElementById('toggle-raw').textContent = 'Voir la liste brute des ' + CENTERS.length + ' centres ↓';
+}
+document.getElementById('toggle-raw').addEventListener('click', ()=>{
+  const el = document.getElementById('raw-list');
+  const vis = el.style.display === 'block';
+  el.style.display = vis ? 'none' : 'block';
+  document.getElementById('toggle-raw').textContent = (vis ? 'Voir la liste brute des ' + CENTERS.length + ' centres ↓' : 'Masquer la liste brute ↑');
+});
+
+// ---------- refresh stats + reset views after dataset change ----------
+function refreshStats(){
+  const tourable = CENTERS.filter(c => !isDepotCenter(c));
+  const totalMaj = tourable.reduce((s,c)=>s+c.nb_maj,0);
+  const totalMin = totalMaj * MINUTES_PER_MAJ_DEFAULT;
+  const centresInventaireAFaire = tourable.filter(c=>c.etat_inventaire==='A FAIRE').length;
+  const totalOrchestra = CENTERS.reduce((s,c)=>s+(c.nb_orchestra||0),0);
+  const totalSmartTouch = CENTERS.reduce((s,c)=>s+(c.nb_smarttouch||0),0);
+  document.getElementById('stat-centres').textContent = CENTERS.length;
+  document.getElementById('stat-maj').textContent = totalMaj;
+  document.getElementById('stat-temps-maj').textContent = fmtDur(totalMin);
+  document.getElementById('stat-jours').textContent = '—';
+  const statInv = document.getElementById('stat-inventaire');
+  if(statInv) statInv.textContent = centresInventaireAFaire;
+  const statTypes = document.getElementById('stat-types');
+  if(statTypes) statTypes.textContent = totalOrchestra + ' / ' + totalSmartTouch;
+  renderRawList();
+  renderAddressTable();
+  renderSuivi();
+  document.getElementById('days-container').innerHTML = '';
+  document.getElementById('map-panel').style.display = 'none';
+}
+
+// ---------- suivi (tracking) tab ----------
+function renderSuivi(){
+  const table = document.getElementById('suivi-table');
+  if(!table) return; // guard in case markup isn't present
+  const filter = document.getElementById('suivi-filter') ? document.getElementById('suivi-filter').value : 'all';
+  const tourable = CENTERS.filter(c => !isDepotCenter(c));
+
+  // -- summary bars (computed against the FULL total of centres, including those
+  //    already up to date / already inventoried in the source file) --
+  const total = tourable.length;
+  const majDone = tourable.filter(c => c.nb_maj === 0 || !!progress['maj:'+c.id]).length;
+  const invDone = tourable.filter(c => c.etat_inventaire === 'FAIT' || !!progress['inventaire:'+c.id]).length;
+
+  const majPct = total ? Math.round(100*majDone/total) : 100;
+  const invPct = total ? Math.round(100*invDone/total) : 100;
+
+  const majBar = document.getElementById('suivi-maj-bar');
+  const invBar = document.getElementById('suivi-inv-bar');
+  if(majBar) majBar.style.width = majPct + '%';
+  if(invBar) invBar.style.width = invPct + '%';
+  const majFig = document.getElementById('suivi-maj-figures');
+  const invFig = document.getElementById('suivi-inv-figures');
+  if(majFig) majFig.textContent = `${majDone} / ${total} centres (${majPct}%)`;
+  if(invFig) invFig.textContent = `${invDone} / ${total} centres (${invPct}%)`;
+
+  // -- per-center table --
+  const rows = tourable.slice().sort((a,b)=>a.etablissement.localeCompare(b.etablissement));
+  let html = `<table><tr>
+    <th>Établissement</th><th>Ville</th><th>Type</th><th>MAJ</th><th>Inventaire</th>
+  </tr>`;
+  let shown = 0;
+  rows.forEach(c=>{
+    const majNA = c.nb_maj === 0;
+    const majDoneC = !!progress['maj:'+c.id];
+    const invNA = c.etat_inventaire !== 'A FAIRE';
+    const invDoneC = !!progress['inventaire:'+c.id];
+
+    const fullyDone = (majNA || majDoneC) && (invNA || invDoneC);
+    if(filter === 'done' && !fullyDone) return;
+    if(filter === 'pending' && fullyDone) return;
+    shown++;
+
+    const majChip = majNA
+      ? '<span class="chip na">✔️ À jour</span>'
+      : `<button type="button" class="chip ${majDoneC?'done':'pending'}" data-toggle="maj:${c.id}">${majDoneC?'✅ Fait':'⏳ '+c.nb_maj+' à faire'}</button>`;
+    const invChip = invNA
+      ? (c.etat_inventaire === 'FAIT' ? '<span class="chip na">✔️ Fait (source)</span>' : '<span class="chip na">— Mixte/inconnu</span>')
+      : `<button type="button" class="chip ${invDoneC?'done':'pending'}" data-toggle="inventaire:${c.id}">${invDoneC?'✅ Fait':'⏳ À faire'}</button>`;
+    const typeStr = [c.nb_orchestra?`${c.nb_orchestra} Orch+`:'', c.nb_smarttouch?`${c.nb_smarttouch} ST`:''].filter(Boolean).join(' · ') || '—';
+
+    html += `<tr>
+      <td>${c.etablissement}</td>
+      <td>${c.ville}</td>
+      <td>${typeStr}</td>
+      <td>${majChip}</td>
+      <td>${invChip}</td>
+    </tr>`;
+  });
+  html += '</table>';
+  if(shown === 0){
+    html += `<p style="text-align:center; color:var(--text-muted); font-size:13px; padding:16px 0;">Aucun centre ne correspond à ce filtre.</p>`;
+  }
+  table.innerHTML = html;
+
+  table.querySelectorAll('button[data-toggle]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const key = btn.getAttribute('data-toggle');
+      progress[key] = !progress[key];
+      await saveProgress();
+      renderSuivi();
+    });
+  });
+}
+
+document.getElementById('suivi-filter') && document.getElementById('suivi-filter').addEventListener('change', renderSuivi);
+
+// -- tab switching --
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const target = btn.getAttribute('data-tab');
+    document.getElementById('tab-tournees').style.display = target === 'tournees' ? 'block' : 'none';
+    document.getElementById('tab-suivi').style.display = target === 'suivi' ? 'block' : 'none';
+    if(target === 'suivi') renderSuivi();
+  });
+});
+
+// ---------- address book ----------
+function renderAddressTable(){
+  const container = document.getElementById('address-table');
+  const rows = CENTERS.slice().sort((a,b)=>a.etablissement.localeCompare(b.etablissement));
+  const known = rows.filter(c => !!addressFor(c)).length;
+  document.getElementById('address-coverage').textContent =
+    `${known} / ${rows.length} centre(s) avec adresse précise — les autres seront géolocalisés au niveau de la ville.`;
+
+  let html = '<div style="display:flex; flex-direction:column; gap:8px; max-height:420px; overflow-y:auto; padding-right:4px;">';
+  rows.forEach(c=>{
+    const key = c.etablissement.trim().toUpperCase();
+    const current = addressBook[key] || '';
+    html += `
+      <div style="display:grid; grid-template-columns:1fr 1.4fr; gap:10px; align-items:center; background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:14px; padding:10px 12px;">
+        <div>
+          <div style="font-weight:800; font-size:13px; color:var(--text-main);">${c.etablissement}</div>
+          <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase;">${c.ville}</div>
+        </div>
+        <input type="text" data-key="${key}" class="addr-input" value="${current.replace(/"/g,'&quot;')}" placeholder="Adresse complète (n°, rue, CP, ville)"
+          style="width:100%; height:38px; padding:0 10px; border-radius:10px; border:1.5px solid #e2e8f0; font-size:12.5px;"/>
+      </div>`;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+document.getElementById('btn-save-addresses').addEventListener('click', async ()=>{
+  const inputs = document.querySelectorAll('.addr-input');
+  inputs.forEach(inp=>{
+    const key = inp.getAttribute('data-key');
+    const val = inp.value.trim();
+    if(val){ addressBook[key] = val; } else { delete addressBook[key]; }
+  });
+  await saveAddressBook();
+  const status = document.getElementById('address-status');
+  status.textContent = 'Carnet d\'adresses enregistré. Relancez le calcul pour appliquer les nouvelles adresses.';
+  status.style.color = 'var(--ok)';
+  renderAddressTable();
+});
+
+// ---------- excel/csv import ----------
+function findCol(headerRow, candidates){
+  const norm = s => String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+  const normHeaders = headerRow.map(norm);
+  for(const cand of candidates){
+    const nc = norm(cand);
+    const idx = normHeaders.findIndex(h => h.includes(nc) || nc.includes(h));
+    if(idx !== -1) return idx;
+  }
+  return -1;
+}
+function classifyType(designation, article){
+  const d = String(designation||'').toUpperCase();
+  return d.includes('ORCHESTRA') ? 'ORCHESTRA+' : 'SMART TOUCH';
+}
+
+async function parseImportedFile(file, targetVersion){
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, {type:'array'});
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:false, defval:''});
+  if(rows.length < 2) throw new Error('Fichier vide ou illisible.');
+
+  const header = rows[0];
+  const iEtab = findCol(header, ['Etablissement','Établissement']);
+  const iVille = findCol(header, ['Localite','Localité','Ville']);
+  const iDept = findCol(header, ['Dept','Département','Dépt']);
+  const iArticle = findCol(header, ['Code Article','Article']);
+  const iDesignation = findCol(header, ['Désignation','Designation']);
+  const iVersion = findCol(header, ['Version Smartview','Version du Smartview','Version']);
+  const iLot = findCol(header, ['N° de Lot','N de Lot','Lot']);
+  const iEtat = findCol(header, ['Etat des Inventaires','Etat inventaire','Inventaire']);
+  const iQteTheo = findCol(header, ['Quantité Théorique','Quantite Theorique','Qte Theorique']);
+  const iQteCompte = findCol(header, ['Quantité Comptée','Quantite Comptee','Qte Comptee']);
+
+  if(iEtab === -1 || iVille === -1 || iVersion === -1){
+    throw new Error("Colonnes attendues introuvables (Etablissement / Localité / Version Smartview). Vérifiez l'en-tête du fichier.");
+  }
+  const hasInventoryData = iEtat !== -1;
+
+  const centersMap = {};
+  let nextId = 0;
+  for(let r=1; r<rows.length; r++){
+    const row = rows[r];
+    if(!row || row.length === 0) continue;
+    const etab = String(row[iEtab]||'').trim();
+    const ville = String(row[iVille]||'').trim();
+    if(!etab || !ville) continue;
+    const version = String(row[iVersion]||'').trim();
+    const article = iArticle !== -1 ? String(row[iArticle]||'').trim() : '';
+    const designation = iDesignation !== -1 ? String(row[iDesignation]||'').trim() : '';
+    const lot = iLot !== -1 ? String(row[iLot]||'').trim() : '';
+    const etat = iEtat !== -1 ? String(row[iEtat]||'').trim().toUpperCase() : '';
+    const dept = iDept !== -1 ? String(row[iDept]||'').trim() : '';
+    const qteTheo = iQteTheo !== -1 ? row[iQteTheo] : '';
+    const qteCompte = iQteCompte !== -1 ? row[iQteCompte] : '';
+    const key = etab + '|' + ville;
+    if(!centersMap[key]){
+      centersMap[key] = {id: nextId++, etablissement: etab, ville: ville, dept, items: []};
+    }
+    centersMap[key].items.push({
+      article, designation, lot, version, etat,
+      type: classifyType(designation, article),
+      qte_theo: qteTheo, qte_compte: qteCompte
+    });
+  }
+
+  const result = Object.values(centersMap).map(c=>{
+    const items = c.items;
+    const nb_total = items.length;
+    const nb_maj = items.filter(it => it.version !== targetVersion).length;
+    const nb_orchestra = items.filter(it => it.type === 'ORCHESTRA+').length;
+    const nb_smarttouch = nb_total - nb_orchestra;
+    let etat_inventaire = 'INCONNU';
+    if(hasInventoryData){
+      const etats = new Set(items.map(it=>it.etat));
+      etat_inventaire = etats.has('A FAIRE') ? 'A FAIRE' : (etats.size===1 && etats.has('FAIT') ? 'FAIT' : (etats.size<=1 ? 'INCONNU' : 'MIXTE'));
+    }
+    return {...c, nb_total, nb_maj, nb_orchestra, nb_smarttouch, etat_inventaire};
+  }).filter(c => c.nb_total > 0);
+
+  result.sort((a,b)=>a.ville.localeCompare(b.ville));
+  result.forEach((c,i)=>c.id=i);
+  return {centers: result, hasInventoryData};
+}
+
+document.getElementById('btn-import').addEventListener('click', async ()=>{
+  const fileInput = document.getElementById('file-import');
+  const status = document.getElementById('import-status');
+  const targetVersion = document.getElementById('target-version').value.trim();
+  if(!fileInput.files.length){
+    status.textContent = 'Sélectionnez d\'abord un fichier .xlsx ou .csv.';
+    status.style.color = 'var(--danger)';
+    return;
+  }
+  status.textContent = 'Lecture du fichier...';
+  status.style.color = '#5B6259';
+  try{
+    const {centers: newCenters, hasInventoryData} = await parseImportedFile(fileInput.files[0], targetVersion);
+    if(newCenters.length === 0){
+      status.textContent = 'Aucun centre trouvé dans ce fichier. Vérifiez les colonnes.';
+      status.style.color = 'var(--danger)';
+      return;
+    }
+    CENTERS = newCenters;
+    progress = {}; // new dataset -> fresh progress tracking
+    await saveDataset();
+    await saveProgress();
+    const totalMaj = CENTERS.reduce((s,c)=>s+c.nb_maj,0);
+    const totalInv = CENTERS.filter(c=>c.etat_inventaire==='A FAIRE').length;
+    status.textContent = hasInventoryData
+      ? `Chargé : ${CENTERS.length} centre(s), ${totalMaj} programmateur(s) à MAJ (cible v${targetVersion}), ${totalInv} centre(s) avec inventaire à faire.`
+      : `Chargé : ${CENTERS.length} centre(s), ${totalMaj} programmateur(s) à MAJ (cible v${targetVersion}). Pas de colonne "Etat des Inventaires" dans ce fichier — le mode Inventaire ne trouvera aucun centre.`;
+    status.style.color = 'var(--ok)';
+    refreshStats();
+  }catch(e){
+    status.textContent = 'Erreur : ' + e.message;
+    status.style.color = 'var(--danger)';
+  }
+});
+
+document.getElementById('btn-restore-sample').addEventListener('click', async ()=>{
+  if(!confirm('Revenir au jeu de données exemple (44 centres d\'origine) ? Le suivi de progression sera réinitialisé.')) return;
+  CENTERS = DEFAULT_CENTERS;
+  progress = {};
+  await saveDataset();
+  await saveProgress();
+  document.getElementById('import-status').textContent = 'Jeu de données exemple restauré.';
+  document.getElementById('import-status').style.color = 'var(--ok)';
+  refreshStats();
+});
+
+// ---------- geocoding ----------
+// Primary: API Géoplateforme (IGN / data.gouv.fr) — official French government
+// geocoder built on the Base Adresse Nationale. Free, no key, generous rate limit
+// (50 req/s), and far more reliable for French addresses than OSM/Nominatim.
+// Secondary fallback: Nominatim (OpenStreetMap), for anything the French index misses.
+function cleanCity(name){
+  return name.replace(/\bCEDEX\s*\d*/i,'').trim().replace(/,\s*France\s*$/i,'');
+}
+
+async function geocodeGeopf(query, index){
+  const q = encodeURIComponent(cleanCity(query));
+  const url = `https://data.geopf.fr/geocodage/search?q=${q}&index=${index}&limit=1`;
+  const res = await fetch(url, {headers:{'Accept':'application/json'}});
+  if(!res.ok) return null;
+  const data = await res.json();
+  const f = data && data.features && data.features[0];
+  if(f && f.geometry && f.geometry.coordinates){
+    const [lon, lat] = f.geometry.coordinates;
+    return {lat, lon};
+  }
+  return null;
+}
+
+async function geocodeNominatim(query){
+  const q = encodeURIComponent(query.includes('France') ? query : query + ', France');
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${q}`;
+  const res = await fetch(url, {headers:{'Accept':'application/json'}});
+  if(!res.ok) return null;
+  const data = await res.json();
+  if(data && data.length){
+    return {lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon)};
+  }
+  return null;
+}
+
+async function geocode(query){
+  const key = query.toUpperCase();
+  if(geoCache[key]) return geoCache[key];
+
+  let pt = null;
+  // 1) French address index (house number + street)
+  try{ pt = await geocodeGeopf(query, 'address'); }catch(e){ pt = null; }
+  // 2) French POI index (hospitals, named institutions not in the address index)
+  if(!pt){ try{ pt = await geocodeGeopf(query, 'poi'); }catch(e){ pt = null; } }
+  // 3) Last resort: OpenStreetMap/Nominatim
+  if(!pt){ try{ pt = await geocodeNominatim(query); }catch(e){ pt = null; } }
+
+  if(pt){ geoCache[key] = pt; }
+  return pt;
+}
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+// ---------- OSRM duration matrix ----------
+async function fetchMatrix(points){
+  // points: array of {lat,lon}, index 0 = depot
+  const coords = points.map(p=>`${p.lon},${p.lat}`).join(';');
+  const url = `https://router.project-osrm.org/table/v1/driving/${coords}?annotations=duration,distance`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if(data.code !== 'Ok') throw new Error('OSRM error: ' + data.code);
+  return data; // durations (s), distances (m)
+}
+
+// ---------- greedy day clustering ----------
+function buildDays(centers, durations, distances, dayStart, dayEnd, taskMinutesFn){
+  const budget = (dayEnd - dayStart); // minutes
+  const remaining = centers.map((c,i)=>i+1); // matrix index (0 = depot)
+  const days = [];
+  let guard = 0;
+  while(remaining.length && guard < 60){
+    guard++;
+    let cur = 0; // depot
+    let used = 0;
+    const stops = [];
+    while(true){
+      let best = -1, bestCost = Infinity;
+      for(const idx of remaining){
+        const travel = durations[cur][idx] / 60;
+        const taskTime = taskMinutesFn(centers[idx-1]);
+        const backHome = durations[idx][0] / 60;
+        const totalIfAdded = used + travel + taskTime + backHome;
+        if(totalIfAdded <= budget && travel < bestCost){
+          bestCost = travel; best = idx;
+        }
+      }
+      if(best === -1) break;
+      const travel = durations[cur][best] / 60;
+      const taskTime = taskMinutesFn(centers[best-1]);
+      used += travel + taskTime;
+      stops.push({idx: best, travelMin: travel, majMin: taskTime, distM: distances[cur][best]});
+      remaining.splice(remaining.indexOf(best),1);
+      cur = best;
+    }
+    if(stops.length === 0){
+      // isolated case: nearest remaining doesn't fit even alone -> force it as its own day
+      const idx = remaining[0];
+      const travel = durations[0][idx] / 60;
+      const taskTime = taskMinutesFn(centers[idx-1]);
+      stops.push({idx, travelMin: travel, majMin: taskTime, distM: distances[0][idx], forced:true});
+      remaining.splice(0,1);
+      cur = idx;
+    }
+    const backTravel = durations[cur][0] / 60;
+    days.push({stops, backTravelMin: backTravel, backDistM: distances[cur][0]});
+  }
+  return days;
+}
+
+function fmtTime(minutesFromMidnight){
+  const h = Math.floor(minutesFromMidnight/60);
+  const m = Math.round(minutesFromMidnight%60);
+  return String(h).padStart(2,'0') + 'h' + String(m).padStart(2,'0');
+}
+function fmtDur(min){
+  const h = Math.floor(min/60), m = Math.round(min%60);
+  if(h<=0) return m+'min';
+  return h+'h'+String(m).padStart(2,'0');
+}
+
+// ---------- rendering ----------
+let map, markerLayer, routeLayer;
+function initMap(depot){
+  // IMPORTANT: the panel must be visible (display:block) BEFORE Leaflet
+  // measures the container, otherwise it computes a 0x0 size and the
+  // map renders broken/grey until a manual resize.
+  document.getElementById('map-panel').style.display='block';
+  if(map){
+    setTimeout(()=>map.invalidateSize(), 50);
+    return;
+  }
+  map = L.map('map').setView([depot.lat, depot.lon], 7);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'&copy; OpenStreetMap contributors', maxZoom:18
+  }).addTo(map);
+  markerLayer = L.layerGroup().addTo(map);
+  routeLayer = L.layerGroup().addTo(map);
+  setTimeout(()=>map.invalidateSize(), 80);
+}
+
+function renderMap(depot, centers, days){
+  markerLayer.clearLayers();
+  routeLayer.clearLayers();
+  const allLatLngs = [[depot.lat, depot.lon]];
+  L.circleMarker([depot.lat, depot.lon], {radius:9, color:'#12182c', fillColor:'#042a72', fillOpacity:1, weight:2})
+    .bindPopup('<b>Départ / retour</b>').addTo(markerLayer);
+
+  let legendHtml='';
+  days.forEach((day, di)=>{
+    const color = dayColors[di % dayColors.length];
+    legendHtml += `<span><i style="background:${color}"></i>Jour ${di+1}</span>`;
+    const latlngs = [[depot.lat, depot.lon]];
+    day.stops.forEach((s,si)=>{
+      const c = centers[s.idx-1];
+      latlngs.push([c.geo.lat, c.geo.lon]);
+      allLatLngs.push([c.geo.lat, c.geo.lon]);
+      L.circleMarker([c.geo.lat, c.geo.lon], {radius:7, color, fillColor:color, fillOpacity:0.9, weight:2})
+        .bindPopup(`<b>${c.etablissement}</b><br>${c.ville}<br>${c.nb_maj} programmateur(s)<br>Jour ${di+1} · arrêt ${si+1}`)
+        .addTo(markerLayer);
+    });
+    latlngs.push([depot.lat, depot.lon]);
+    L.polyline(latlngs, {color, weight:3, opacity:0.6, dashArray:'6 5'}).addTo(routeLayer);
+  });
+  document.getElementById('legend').innerHTML = legendHtml;
+  if(allLatLngs.length > 1){
+    map.fitBounds(allLatLngs, {padding:[30,30]});
+  }
+  setTimeout(()=>map.invalidateSize(), 60);
+}
+
+function wazeLink(lat, lon){
+  return `https://waze.com/ul?ll=${lat},${lon}&navigate=yes`;
+}
+function gmapsSingleLink(lat, lon){
+  return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}&travelmode=driving`;
+}
+function gmapsDayLink(depot, stopsGeo){
+  // full-day route, round trip from/to depot, all stops as waypoints in visiting order
+  const origin = `${depot.lat},${depot.lon}`;
+  const destination = origin;
+  const waypoints = stopsGeo.map(g=>`${g.lat},${g.lon}`).join('|');
+  return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&waypoints=${encodeURIComponent(waypoints)}&travelmode=driving`;
+}
+
+function renderDays(depot, centers, days, dayStartMin, mode){
+  const container = document.getElementById('days-container');
+  container.innerHTML = '';
+  days.forEach((day, di)=>{
+    const color = dayColors[di % dayColors.length];
+    let t = dayStartMin;
+    const totalTask = day.stops.reduce((s,x)=>s+(mode==='maj' ? centers[x.idx-1].nb_maj : centers[x.idx-1].nb_total),0);
+    const totalTravel = day.stops.reduce((s,x)=>s+x.travelMin,0) + day.backTravelMin;
+    const totalDist = (day.stops.reduce((s,x)=>s+x.distM,0) + day.backDistM)/1000;
+    const taskLabel = mode === 'maj' ? 'MAJ' : 'article(s) à inventorier';
+
+    const ticket = document.createElement('div');
+    ticket.className = 'ticket';
+    let stopsHtml = `<div class="stop depot"><div class="time">${fmtTime(t)}</div><div class="num">•</div><div class="info"><div class="etab">Départ — Tours</div></div><div></div></div>`;
+
+    day.stops.forEach((s, si)=>{
+      const c = centers[s.idx-1];
+      t += s.travelMin;
+      const arr = t;
+      t += s.majMin;
+      const progKey = mode + ':' + c.id;
+      const done = !!progress[progKey];
+      const taskCount = mode === 'maj' ? c.nb_maj : c.nb_total;
+      const typeStr = [c.nb_orchestra?`${c.nb_orchestra} Orch+`:'', c.nb_smarttouch?`${c.nb_smarttouch} ST`:''].filter(Boolean).join(' · ');
+      const navLinks = c.geo ? `
+            <a class="btn-export waze" href="${wazeLink(c.geo.lat, c.geo.lon)}" target="_blank" rel="noopener" title="Naviguer avec Waze">🚗 Waze</a>
+            <a class="btn-export gmaps" href="${gmapsSingleLink(c.geo.lat, c.geo.lon)}" target="_blank" rel="noopener" title="Naviguer avec Google Maps">📍 Maps</a>` : '';
+      stopsHtml += `
+        <div class="stop ${done?'done':''}" data-cid="${progKey}">
+          <div class="time">${fmtTime(arr)}</div>
+          <div class="num">${si+1}</div>
+          <div class="info">
+            <div class="etab">${c.etablissement}</div>
+            <div class="ville">${c.ville}${typeStr ? ' · '+typeStr : ''}${s.forced?' — hors budget journée, trajet isolé':''}</div>
+          </div>
+          <div class="stop-task" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+            <span class="maj">${taskCount} ${taskLabel} · ${fmtDur(s.majMin)}</span>
+            <input type="checkbox" ${done?'checked':''} data-cid="${progKey}"/>
+          </div>
+          <div class="stop-nav" style="grid-column:1/-1; display:flex; gap:8px; margin-top:2px;">${navLinks}</div>
+        </div>`;
+    });
+    t += day.backTravelMin;
+    stopsHtml += `<div class="stop depot"><div class="time">${fmtTime(t)}</div><div class="num">•</div><div class="info"><div class="etab">Retour — Tours</div></div><div></div></div>`;
+
+    const stopsGeo = day.stops.map(s=>centers[s.idx-1].geo).filter(Boolean);
+    const dayGmapsLink = stopsGeo.length ? gmapsDayLink(depot, stopsGeo) : null;
+    const addressListText = day.stops.map((s,si)=>{
+      const c = centers[s.idx-1];
+      return `${si+1}. ${c.etablissement} — ${addressFor(c) || c.ville}`;
+    }).join('\n');
+
+    ticket.innerHTML = `
+      <div class="ticket-head" style="background:${color}">
+        <div class="day-name">Jour ${di+1}</div>
+        <div class="day-meta">${day.stops.length} centre(s) · ${totalTask} ${taskLabel}<br>${fmtDur(totalTravel)} de route · ${totalDist.toFixed(0)} km · fin ${fmtTime(t)}</div>
+      </div>
+      <div class="perf"></div>
+      <div style="padding:12px 20px 0;">
+        <div class="export-row">
+          ${dayGmapsLink ? `<a class="btn-export gmaps" href="${dayGmapsLink}" target="_blank" rel="noopener">🗺️ Ouvrir toute la tournée dans Google Maps</a>` : ''}
+          <button class="btn-export copy" type="button" data-copy="${encodeURIComponent(addressListText)}">📋 Copier la liste d'adresses</button>
+        </div>
+      </div>
+      <div class="stops">${stopsHtml}</div>
+    `;
+    container.appendChild(ticket);
+  });
+
+  container.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    cb.addEventListener('change', async (e)=>{
+      const key = e.target.getAttribute('data-cid');
+      progress[key] = e.target.checked;
+      await saveProgress();
+      const stopDiv = e.target.closest('.stop');
+      stopDiv.classList.toggle('done', e.target.checked);
+      renderSuivi();
+    });
+  });
+
+  container.querySelectorAll('.btn-export.copy').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const text = decodeURIComponent(btn.getAttribute('data-copy'));
+      const original = btn.textContent;
+      try{
+        await navigator.clipboard.writeText(text);
+        btn.textContent = '✅ Copié !';
+      }catch(e){
+        // clipboard API unavailable (e.g. non-HTTPS context) — fall back to a prompt
+        window.prompt('Copiez le texte ci-dessous :', text);
+      }
+      setTimeout(()=>{ btn.textContent = original; }, 1800);
+    });
+  });
+}
+
+// ---------- main flow ----------
+async function calculate(){
+  const btn = document.getElementById('btn-calc');
+  btn.disabled = true;
+  document.getElementById('warn-area').innerHTML='';
+  const progWrap = document.getElementById('progress-wrap');
+  progWrap.style.display='block';
+  const bar = document.getElementById('progress-bar');
+  const label = document.getElementById('progress-label');
+
+  const depotCityInput = document.getElementById('depot-city').value || 'Tours, France';
+  const [sh,sm] = document.getElementById('day-start').value.split(':').map(Number);
+  const [eh,em] = document.getElementById('day-end').value.split(':').map(Number);
+  const dayStartMin = sh*60+(sm||0);
+  const dayEndMin = eh*60+(em||0);
+  const minPerMaj = parseFloat(document.getElementById('min-per-maj').value) || MINUTES_PER_MAJ_DEFAULT;
+  const minPerInv = parseFloat(document.getElementById('min-per-inv').value) || MINUTES_PER_INV_DEFAULT;
+  const mode = document.getElementById('tour-mode').value; // 'maj' | 'inventaire'
+
+  // select the pool of centers relevant to the chosen objective
+  // (le dépôt personnel MORIN J. / Tours est exclu : ce n'est pas un site à visiter)
+  const pool = (mode === 'maj'
+    ? CENTERS.filter(c => c.nb_maj > 0)
+    : CENTERS.filter(c => c.etat_inventaire === 'A FAIRE')
+  ).filter(c => !isDepotCenter(c));
+
+  const taskMinutesFn = mode === 'maj'
+    ? (c => c.nb_maj * minPerMaj)
+    : (c => c.nb_total * minPerInv);
+
+  // filter out centers already marked done for this specific objective
+  const active = pool.filter(c => !progress[mode+':'+c.id]);
+  if(pool.length === 0){
+    const msg = mode === 'maj'
+      ? 'Aucun centre n\'a de mise à jour logicielle en attente. 🎉'
+      : 'Aucun centre n\'a d\'inventaire "à faire" dans le jeu de données actuel.';
+    document.getElementById('days-container').innerHTML = `<div class="panel">${msg}</div>`;
+    btn.disabled = false; progWrap.style.display='none';
+    return;
+  }
+  if(active.length === 0){
+    document.getElementById('days-container').innerHTML = '<div class="panel">Tous les centres de cet objectif sont marqués comme traités. 🎉</div>';
+    btn.disabled = false; progWrap.style.display='none';
+    return;
+  }
+
+  // 1. geocode depot
+  label.textContent = 'Géolocalisation du point de départ...';
+  bar.style.width = '3%';
+  let depot = geoCache['DEPOT:'+depotCityInput.toUpperCase()];
+  if(!depot){
+    const g = await geocode(depotCityInput);
+    if(!g){ alert('Impossible de géolocaliser le point de départ.'); btn.disabled=false; return; }
+    depot = g;
+    geoCache['DEPOT:'+depotCityInput.toUpperCase()] = depot;
+  }
+
+  // 2. geocode centers (address book first, city fallback) — sequential w/ delay
+  //    to respect Nominatim usage policy
+  const failed = [];
+  let approxCount = 0;
+  for(let i=0;i<active.length;i++){
+    const c = active[i];
+    const addr = addressFor(c);
+    const cityQuery = cleanCity(c.ville) + ', France';
+    const primaryQuery = addr || cityQuery;
+    label.textContent = `Géolocalisation... (${i+1}/${active.length}) ${addr ? c.etablissement : c.ville}`;
+    bar.style.width = (3 + (i/active.length)*55) + '%';
+
+    let g = geoCache[primaryQuery.toUpperCase()];
+    if(!g){
+      try{
+        g = await geocode(primaryQuery);
+        await sleep(200);
+      }catch(e){ g = null; }
+    }
+    // if a precise address was known but couldn't be geolocated, fall back to the city
+    // rather than dropping the center from the tour entirely
+    if(!g && addr){
+      g = geoCache[cityQuery.toUpperCase()];
+      if(!g){
+        try{
+          g = await geocode(cityQuery);
+          await sleep(200);
+        }catch(e){ g = null; }
+      }
+      if(g) c.usedAddress = false;
+    } else {
+      c.usedAddress = !!addr;
+    }
+    if(!c.usedAddress) approxCount++;
+    if(g){ c.geo = g; } else { failed.push(c); }
+  }
+  await saveGeoCache();
+  const geocoded = active.filter(c=>c.geo);
+
+  if(failed.length){
+    document.getElementById('warn-area').innerHTML = `<div class="warn-box">⚠️ ${failed.length} centre(s) n'ont pas pu être géolocalisés, même via la ville, et sont exclus de la tournée : ${failed.map(f=>f.etablissement+' ('+f.ville+')').join(', ')}. Vérifiez l'orthographe dans le fichier source ou le carnet d'adresses.</div>`;
+  }
+  if(approxCount){
+    document.getElementById('warn-area').innerHTML += `<div class="warn-box" style="background:#fffbeb;border-color:#fde68a;color:#92400e;">ℹ️ ${approxCount} centre(s) géolocalisé(s) au niveau de la ville seulement (pas d'adresse précise, ou adresse introuvable). Complétez le carnet d'adresses ci-dessus pour affiner ces trajets.</div>`;
+  }
+
+  if(geocoded.length === 0){
+    btn.disabled=false; progWrap.style.display='none';
+    return;
+  }
+
+  // 3. distance matrix
+  label.textContent = 'Calcul des temps de trajet routiers (OSRM)...';
+  bar.style.width = '65%';
+  const points = [depot, ...geocoded.map(c=>c.geo)];
+  let matrix;
+  try{
+    matrix = await fetchMatrix(points);
+  }catch(e){
+    document.getElementById('warn-area').innerHTML += `<div class="warn-box">⚠️ Le service de calcul d'itinéraire (OSRM) est indisponible pour le moment. Réessayez dans un instant.</div>`;
+    btn.disabled=false; progWrap.style.display='none';
+    return;
+  }
+  bar.style.width = '85%';
+  label.textContent = 'Construction des journées...';
+
+  const days = buildDays(geocoded, matrix.durations, matrix.distances, dayStartMin, dayEndMin, taskMinutesFn);
+
+  bar.style.width = '100%';
+  label.textContent = `Terminé — ${days.length} jour(s), ${geocoded.length} centre(s) planifié(s).`;
+
+  // stats
+  document.getElementById('stat-jours').textContent = days.length;
+
+  initMap(depot);
+  renderMap(depot, geocoded, days);
+  renderDays(depot, geocoded, days, dayStartMin, mode);
+
+  setTimeout(()=>{ progWrap.style.display='none'; }, 2500);
+  btn.disabled = false;
+}
+
+document.getElementById('tour-mode').addEventListener('change', (e)=>{
+  const isMaj = e.target.value === 'maj';
+  document.getElementById('field-min-maj').style.display = isMaj ? 'flex' : 'none';
+  document.getElementById('field-min-inv').style.display = isMaj ? 'none' : 'flex';
+});
+
+document.getElementById('btn-calc').addEventListener('click', calculate);
+document.getElementById('btn-reset-progress').addEventListener('click', async ()=>{
+  if(confirm('Réinitialiser le suivi de progression (tous les centres redeviennent "à faire") ?')){
+    progress = {};
+    await saveProgress();
+    document.querySelectorAll('.stop input[type=checkbox]').forEach(cb=>{cb.checked=false;});
+    document.querySelectorAll('.stop').forEach(s=>s.classList.remove('done'));
+    renderSuivi();
+  }
+});
+
+(async function init(){
+  await loadStorage();
+  refreshStats();
+})();
+</script>
+</body>
+</html>
